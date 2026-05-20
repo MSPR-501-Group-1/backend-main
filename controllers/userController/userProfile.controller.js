@@ -36,22 +36,10 @@ export const createUserProfile = async (req, res) => {
             data: profile
         });
     } catch (error) {
-        if (error.message === "PROFILE_EXISTS") {
-            return res.status(409).json({
-                success: false,
-                message: "Un profil existe déjà pour cet utilisateur"
-            });
-        }
         if (error.message === "USER_NOT_FOUND") {
             return res.status(404).json({
                 success: false,
                 message: "Utilisateur non trouvé"
-            });
-        }
-        if (error.message === "GOAL_NOT_FOUND") {
-            return res.status(400).json({
-                success: false,
-                message: "L'objectif de santé spécifié n'existe pas"
             });
         }
         console.error("Erreur createUserProfile:", error);
@@ -87,12 +75,6 @@ export const updateUserProfile = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Aucun champ à mettre à jour"
-            });
-        }
-        if (error.message === "GOAL_NOT_FOUND") {
-            return res.status(400).json({
-                success: false,
-                message: "L'objectif de santé spécifié n'existe pas"
             });
         }
         console.error("Erreur updateUserProfile:", error);
