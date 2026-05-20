@@ -1,125 +1,125 @@
 import { db } from "../../db.js";
+import { v4 as uuidv4 } from "uuid";
 
-const PROFILE_FIELDS = ["height_cm", "current_weight_kg", "allergies", "diet_type"];
+const METRIC_FIELDS = [
+    "recorded_at",
+    "age",
+    "gender",
+    "height_cm",
+    "weight_kg",
+    "bmi",
+    "body_fat_percentage",
+    "resting_bpm",
+    "health_goal",
+    "target_timeline_weeks",
+    "fitness_level",
+    "fatigue_score",
+    "has_gym_access",
+    "workout_variety_preference",
+    "injury_type",
+    "injury_severity",
+    "medical_condition",
+];
 
 const toProfilePayload = (row) => {
     if (!row) {
         return null;
     }
 
-    const goalIds = Array.isArray(row.goal_ids) ? row.goal_ids : [];
-
     return {
+        metric_id: row.metric_id,
         user_id: row.user_id,
+        recorded_at: row.recorded_at,
+        age: row.age,
+        gender: row.gender,
         height_cm: row.height_cm,
-        current_weight_kg: row.current_weight_kg,
-        allergies: row.allergies,
-        diet_type: row.diet_type,
-        goal_id: goalIds[0] ?? null,
-        goal_ids: goalIds,
-        updated_at: row.updated_at,
+        weight_kg: row.weight_kg,
+        bmi: row.bmi,
+        body_fat_percentage: row.body_fat_percentage,
+        resting_bpm: row.resting_bpm,
+        health_goal: row.health_goal,
+        target_timeline_weeks: row.target_timeline_weeks,
+        fitness_level: row.fitness_level,
+        fatigue_score: row.fatigue_score,
+        has_gym_access: row.has_gym_access,
+        workout_variety_preference: row.workout_variety_preference,
+        injury_type: row.injury_type,
+        injury_severity: row.injury_severity,
+        medical_condition: row.medical_condition,
     };
 };
 
 const findProfileById = async (client, user_id) => {
     const result = await client.query(
         `SELECT
-            u.user_id,
-            u.height_cm,
-            u.current_weight_kg,
-            u.allergies,
-            u.diet_type,
-            u.updated_at,
-            COALESCE(
-                array_agg(uhg.goal_id) FILTER (WHERE uhg.goal_id IS NOT NULL),
-                ARRAY[]::varchar[]
-            ) AS goal_ids
-         FROM user_ u
-         LEFT JOIN user_health_goal uhg ON uhg.user_id = u.user_id
-         WHERE u.user_id = $1
-         GROUP BY u.user_id, u.height_cm, u.current_weight_kg, u.allergies, u.diet_type, u.updated_at`,
+            um.metric_id,
+            um.user_id,
+            um.recorded_at,
+            um.age,
+            um.gender,
+            um.height_cm,
+            um.weight_kg,
+            um.bmi,
+            um.body_fat_percentage,
+            um.resting_bpm,
+            um.health_goal,
+            um.target_timeline_weeks,
+            um.fitness_level,
+            um.fatigue_score,
+            um.has_gym_access,
+            um.workout_variety_preference,
+            um.injury_type,
+            um.injury_severity,
+            um.medical_condition
+         FROM user_metrics um
+         WHERE um.user_id = $1
+         ORDER BY um.recorded_at DESC NULLS LAST, um.metric_id DESC
+         LIMIT 1`,
         [user_id]
     );
 
     return result.rows[0] || null;
 };
 
-const ensureGoalExists = async (client, goal_id) => {
-    if (!goal_id) {
-        return;
-    }
-
-    const existingGoal = await client.query(
-        "SELECT goal_id FROM health_goal WHERE goal_id = $1",
-        [goal_id]
-    );
-
-    if (existingGoal.rows.length === 0) {
-        throw new Error("GOAL_NOT_FOUND");
-    }
-};
-
-const updateUserColumns = async (client, user_id, data, { requireAtLeastOneField }) => {
-    const updates = [];
-    const params = [];
-    let paramIndex = 1;
-
-    for (const field of PROFILE_FIELDS) {
-        if (data[field] !== undefined) {
-            updates.push(`${field} = $${paramIndex++}`);
-            params.push(data[field]);
-        }
-    }
-
-    if (updates.length === 0) {
-        if (requireAtLeastOneField) {
-            throw new Error("NO_FIELDS_TO_UPDATE");
-        }
-        return;
-    }
-
-    params.push(user_id);
-
-    await client.query(
-        `UPDATE user_
-         SET ${updates.join(", ")}, updated_at = NOW()
-         WHERE user_id = $${paramIndex}`,
-        params
-    );
-};
-
-const syncUserGoal = async (client, user_id, goal_id) => {
-    await client.query(
-        "DELETE FROM user_health_goal WHERE user_id = $1",
+const getLatestMetricId = async (client, user_id) => {
+    const result = await client.query(
+        `SELECT metric_id
+         FROM user_metrics
+         WHERE user_id = $1
+         ORDER BY recorded_at DESC NULLS LAST, metric_id DESC
+         LIMIT 1`,
         [user_id]
     );
 
-    if (goal_id) {
-        await client.query(
-            "INSERT INTO user_health_goal (user_id, goal_id) VALUES ($1, $2)",
-            [user_id, goal_id]
-        );
-    }
+    return result.rows[0]?.metric_id || null;
 };
 
 // GET all user profiles
 export const getUserProfiles = async () => {
     const result = await db.query(
         `SELECT
-            u.user_id,
-            u.height_cm,
-            u.current_weight_kg,
-            u.allergies,
-            u.diet_type,
-            u.updated_at,
-            COALESCE(
-                array_agg(uhg.goal_id) FILTER (WHERE uhg.goal_id IS NOT NULL),
-                ARRAY[]::varchar[]
-            ) AS goal_ids
-         FROM user_ u
-         LEFT JOIN user_health_goal uhg ON uhg.user_id = u.user_id
-         GROUP BY u.user_id, u.height_cm, u.current_weight_kg, u.allergies, u.diet_type, u.updated_at
-         ORDER BY u.user_id`
+            DISTINCT ON (um.user_id)
+            um.metric_id,
+            um.user_id,
+            um.recorded_at,
+            um.age,
+            um.gender,
+            um.height_cm,
+            um.weight_kg,
+            um.bmi,
+            um.body_fat_percentage,
+            um.resting_bpm,
+            um.health_goal,
+            um.target_timeline_weeks,
+            um.fitness_level,
+            um.fatigue_score,
+            um.has_gym_access,
+            um.workout_variety_preference,
+            um.injury_type,
+            um.injury_severity,
+            um.medical_condition
+         FROM user_metrics um
+         ORDER BY um.user_id, um.recorded_at DESC NULLS LAST, um.metric_id DESC`
     );
 
     return result.rows.map(toProfilePayload);
@@ -153,17 +153,60 @@ export const createUserProfile = async (user_id, data = {}) => {
             throw new Error("USER_NOT_FOUND");
         }
 
-        if (data.goal_id !== undefined) {
-            await ensureGoalExists(client, data.goal_id);
-        }
+        const metricId = data.metric_id || uuidv4();
+        const recordedAt = data.recorded_at || new Date().toISOString().split("T")[0];
 
-        await updateUserColumns(client, user_id, data, { requireAtLeastOneField: false });
+        const insertValues = [
+            metricId,
+            user_id,
+            recordedAt,
+            data.age ?? null,
+            data.gender ?? null,
+            data.height_cm ?? null,
+            data.weight_kg ?? null,
+            data.bmi ?? null,
+            data.body_fat_percentage ?? null,
+            data.resting_bpm ?? null,
+            data.health_goal ?? null,
+            data.target_timeline_weeks ?? null,
+            data.fitness_level ?? null,
+            data.fatigue_score ?? null,
+            data.has_gym_access ?? null,
+            data.workout_variety_preference ?? null,
+            data.injury_type ?? null,
+            data.injury_severity ?? null,
+            data.medical_condition ?? null,
+        ];
 
-        if (data.goal_id !== undefined) {
-            await syncUserGoal(client, user_id, data.goal_id);
-        }
+        const placeholders = insertValues.map((_, index) => `$${index + 1}`).join(", ");
 
-        const row = await findProfileById(client, user_id);
+        const insertResult = await client.query(
+            `INSERT INTO user_metrics (
+                metric_id,
+                user_id,
+                recorded_at,
+                age,
+                gender,
+                height_cm,
+                weight_kg,
+                bmi,
+                body_fat_percentage,
+                resting_bpm,
+                health_goal,
+                target_timeline_weeks,
+                fitness_level,
+                fatigue_score,
+                has_gym_access,
+                workout_variety_preference,
+                injury_type,
+                injury_severity,
+                medical_condition
+            ) VALUES (${placeholders})
+            RETURNING *`,
+            insertValues
+        );
+
+        const row = insertResult.rows[0];
 
         await client.query("COMMIT");
         return toProfilePayload(row);
@@ -177,10 +220,9 @@ export const createUserProfile = async (user_id, data = {}) => {
 
 // PUT update a user profile by user_id
 export const updateUserProfile = async (user_id, data) => {
-    const hasBaseField = PROFILE_FIELDS.some((field) => data[field] !== undefined);
-    const hasGoalField = data.goal_id !== undefined;
+    const hasMetricField = METRIC_FIELDS.some((field) => data[field] !== undefined);
 
-    if (!hasBaseField && !hasGoalField) {
+    if (!hasMetricField) {
         throw new Error("NO_FIELDS_TO_UPDATE");
     }
 
@@ -199,17 +241,35 @@ export const updateUserProfile = async (user_id, data) => {
             return null;
         }
 
-        if (hasGoalField) {
-            await ensureGoalExists(client, data.goal_id);
+        const metricId = await getLatestMetricId(client, user_id);
+
+        if (!metricId) {
+            await client.query("ROLLBACK");
+            return null;
         }
 
-        await updateUserColumns(client, user_id, data, { requireAtLeastOneField: false });
+        const updates = [];
+        const params = [];
+        let paramIndex = 1;
 
-        if (hasGoalField) {
-            await syncUserGoal(client, user_id, data.goal_id);
+        for (const field of METRIC_FIELDS) {
+            if (data[field] !== undefined) {
+                updates.push(`${field} = $${paramIndex++}`);
+                params.push(data[field]);
+            }
         }
 
-        const row = await findProfileById(client, user_id);
+        params.push(metricId);
+
+        const updateResult = await client.query(
+            `UPDATE user_metrics
+             SET ${updates.join(", ")}
+             WHERE metric_id = $${paramIndex}
+             RETURNING *`,
+            params
+        );
+
+        const row = updateResult.rows[0] || null;
 
         await client.query("COMMIT");
         return toProfilePayload(row);
@@ -238,21 +298,17 @@ export const deleteUserProfile = async (user_id) => {
             return null;
         }
 
-        await client.query(
-            `UPDATE user_
-             SET height_cm = NULL,
-                 current_weight_kg = NULL,
-                 allergies = 'NONE',
-                 diet_type = 'NONE',
-                 updated_at = NOW()
-             WHERE user_id = $1`,
+        const existingMetric = await client.query(
+            "SELECT metric_id FROM user_metrics WHERE user_id = $1 LIMIT 1",
             [user_id]
         );
 
-        await client.query(
-            "DELETE FROM user_health_goal WHERE user_id = $1",
-            [user_id]
-        );
+        if (existingMetric.rows.length === 0) {
+            await client.query("ROLLBACK");
+            return null;
+        }
+
+        await client.query("DELETE FROM user_metrics WHERE user_id = $1", [user_id]);
 
         await client.query("COMMIT");
         return { user_id };
