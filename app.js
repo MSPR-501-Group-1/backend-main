@@ -11,6 +11,7 @@ import workoutPredictionRoutes from "./routes/workoutPrediction.route.js";
 import analyticsRoutes, { partnersRouter, dataQualityRouter, dashboardRouter, anomaliesRouter } from "./routes/analytics.route.js";
 import etlRoutes from "./routes/etl.routes.js";
 import filesRoutes from "./routes/files.routes.js";
+import nutritionIARoutes from "./routes/nutritionIA.route.js";
 
 // Cron pour les pipelines ETL
 import './cron/cronForEtl.js';
@@ -43,6 +44,7 @@ app.use("/", anomaliesRouter);
 app.use("/etl", etlRoutes);
 app.use("/files", filesRoutes);
 app.use("/workout-prediction", workoutPredictionRoutes);
+app.use("/nutrition-ia", nutritionIARoutes);
 
 // Middleware de gestion d'erreurs global
 app.use((err, req, res, next) => {
