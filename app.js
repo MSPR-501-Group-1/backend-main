@@ -41,7 +41,7 @@ app.use("/data-quality", dataQualityRouter);
 app.use("/", dashboardRouter);
 app.use("/", anomaliesRouter);
 app.use("/etl", etlRoutes);
-app.use("/api/files", filesRoutes);
+app.use("/files", filesRoutes);
 app.use("/workout-prediction", workoutPredictionRoutes);
 
 // Middleware de gestion d'erreurs global
