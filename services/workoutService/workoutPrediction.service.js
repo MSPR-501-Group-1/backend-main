@@ -8,17 +8,27 @@ const getIaWorkoutApiUrl = () => {
 };
 
 const callIaWorkoutApi = async (path, payload) => {
-    const response = await fetch(`${getIaWorkoutApiUrl()}${path}`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-    });
+    let response;
+    try {
+        response = await fetch(`${getIaWorkoutApiUrl()}${path}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+        });
+    } catch (networkError) {
+        throw new Error(`IA_API_UNAVAILABLE: ${networkError.message}`);
+    }
+
+    if (response.status === 422) {
+        const errorBody = await response.text();
+        throw new Error(`IA_API_VALIDATION: ${errorBody}`);
+    }
 
     if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(`IA workout API call failed (${response.status}): ${errorBody || response.statusText}`);
+        throw new Error(`IA_API_UNAVAILABLE: ${response.status} ${errorBody || response.statusText}`);
     }
 
     return response.json();
@@ -29,6 +39,7 @@ const getLatestUserMetrics = async (userId) => {
         `SELECT *
          FROM user_metrics
          WHERE user_id = $1
+           AND age IS NOT NULL
          ORDER BY recorded_at DESC NULLS LAST
          LIMIT 1`,
         [userId]
@@ -59,7 +70,7 @@ export const predictWorkoutPlan = async ({ userId, fatigueScore }) => {
     const metrics = await getLatestUserMetrics(userId);
 
     if (!metrics) {
-        throw new Error("Aucune métrique trouvée pour cet utilisateur.");
+        throw new Error("NO_METRICS_FOUND");
     }
 
     const payload = buildPredictionPayload(metrics, fatigueScore);
@@ -70,5 +81,9 @@ export const predictWorkoutPlan = async ({ userId, fatigueScore }) => {
 
     const prediction = await callIaWorkoutApi("/predict", payload);
 
-    return prediction?.recommended_plan ?? prediction?.recommendedPlan ?? null;
+    return {
+        recommended_program:   prediction.recommended_program   ?? null,
+        recommended_intensity: prediction.recommended_intensity ?? null,
+        plan:                  prediction.recommended_plan      ?? [],
+    };
 };
