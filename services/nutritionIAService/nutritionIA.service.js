@@ -24,19 +24,6 @@ const callIa = async (path, options = {}) => {
     return response.json();
 };
 
-// ─── Recherche d'ingrédients ───────────────────────────────────────────────────
-
-export const searchIngredients = async (name, limit = 10) => {
-    const qs = new URLSearchParams({ name, limit: String(limit) });
-    return callIa(`/api/v1/ingredients/search?${qs}`);
-};
-
-// ─── Besoins journaliers ───────────────────────────────────────────────────────
-
-export const getDailyNeeds = async (userId) => {
-    return callIa(`/api/v1/users/${encodeURIComponent(userId)}/daily-needs`);
-};
-
 // ─── Plan de repas (génération Ollama) ────────────────────────────────────────
 
 export const getMealPlan = async (userId, days = 7) => {
@@ -44,13 +31,6 @@ export const getMealPlan = async (userId, days = 7) => {
         `/api/v1/users/${encodeURIComponent(userId)}/meal-plan?days=${days}`,
         { method: "POST" },
     );
-};
-
-// ─── Historique des analyses ───────────────────────────────────────────────────
-
-export const getUserAnalyses = async (userId, limit = 20, skip = 0) => {
-    const qs = new URLSearchParams({ limit: String(limit), skip: String(skip) });
-    return callIa(`/api/v1/users/${encodeURIComponent(userId)}/analyses?${qs}`);
 };
 
 // ─── Analyse de repas par photo (multipart → proxy vers IA) ───────────────────

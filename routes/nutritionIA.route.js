@@ -17,27 +17,11 @@ const upload = multer({
     },
 });
 
-// ─── Ingrédients ───────────────────────────────────────────────────────────────
-// Accessible à tout utilisateur connecté
-router.get("/ingredients/search", authenticate, controller.searchIngredients);
-
 // ─── Routes par utilisateur (propriétaire ou admin uniquement) ─────────────────
-router.get(
-    "/users/:id/daily-needs",
-    authenticate, requireOwnerOrAdmin,
-    controller.getDailyNeeds,
-);
-
 router.post(
     "/users/:id/meal-plan",
     authenticate, requireOwnerOrAdmin,
     controller.getMealPlan,
-);
-
-router.get(
-    "/users/:id/analyses",
-    authenticate, requireOwnerOrAdmin,
-    controller.getUserAnalyses,
 );
 
 router.post(
