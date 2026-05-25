@@ -2,7 +2,7 @@
 // En docker : http://ia-nutrition-recommendation:8000
 // En local  : http://localhost:8000 (via IA_NUTRITION_URL dans .env)
 
-const DEFAULT_IA_URL = "http://ia-nutrition-recommendation:8000";
+const DEFAULT_IA_URL = "http://ia-nutrition-recommendation:8002";
 
 const getIaUrl = () => {
     const raw = String(process.env.IA_NUTRITION_URL || "").trim();
