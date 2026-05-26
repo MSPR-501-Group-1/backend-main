@@ -1,4 +1,5 @@
 import { db } from "../../db.js";
+import { calculateAge } from "../../lib/calculateAge.js";
 
 const DEFAULT_IA_WORKOUT_API_URL = "http://ia-workout-recommendation:8001";
 
@@ -36,16 +37,27 @@ const callIaWorkoutApi = async (path, payload) => {
 
 const getLatestUserMetrics = async (userId) => {
     const result = await db.query(
-        `SELECT *
+                `SELECT *, birth_date AS age
          FROM user_metrics
          WHERE user_id = $1
-           AND age IS NOT NULL
+           AND birth_date IS NOT NULL
          ORDER BY recorded_at DESC NULLS LAST
          LIMIT 1`,
         [userId]
     );
 
-    return result.rows[0] || null;
+    const latestMetric = result.rows[0];
+
+    if (!latestMetric) {
+        return null;
+    }
+
+    const { birth_date, age, ...rest } = latestMetric;
+
+    return {
+        ...rest,
+        age: calculateAge(age ?? birth_date),
+    };
 };
 
 const buildPredictionPayload = (metricsRow, fatigueScore) => {
