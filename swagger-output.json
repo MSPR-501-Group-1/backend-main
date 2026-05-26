@@ -1734,7 +1734,7 @@
         }
       }
     },
-    "/api/files/{type}/{filename}": {
+    "/files/{type}/{filename}": {
       "get": {
         "description": "",
         "parameters": [

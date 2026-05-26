@@ -3,7 +3,7 @@ const router = Router();
 
 import * as filesController from "../controllers/filesController/files.controller.js";
 
-// GET /api/files/:type/:filename
+// GET /files/:type/:filename
 router.get("/:type/:filename", filesController.downloadFile);
 
 export default router;
