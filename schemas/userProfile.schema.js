@@ -33,7 +33,7 @@ const dateString = z
 export const createUserProfileSchema = z.object({
     metric_id: z.string().max(50, "metric_id trop long (max 50)").optional(),
     recorded_at: dateString.optional(),
-    age: z.number({ invalid_type_error: "age doit être un nombre" }).int().min(0).optional(),
+    birth_date: dateString.optional(),
     gender: genderEnum.optional(),
     height_cm: z
         .number({ invalid_type_error: "height_cm doit être un nombre" })
