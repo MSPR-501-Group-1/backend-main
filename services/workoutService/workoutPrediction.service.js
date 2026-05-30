@@ -1,5 +1,6 @@
 import { db } from "../../db.js";
 import { calculateAge } from "../../lib/calculateAge.js";
+import { getMongoDb } from "../../mongo.js";
 
 const DEFAULT_IA_WORKOUT_API_URL = "http://ia-workout-recommendation:8001";
 
@@ -78,6 +79,24 @@ const buildPredictionPayload = (metricsRow, fatigueScore) => {
     };
 };
 
+const persistWorkoutPrediction = async ({ userId, prediction }) => {
+    const mongoDb = await getMongoDb();
+    const workoutPrograms = mongoDb.collection("workout_programs");
+
+    const document = {
+        user_id: String(userId),
+        recommended_program: prediction.recommended_program,
+        recommended_intensity: prediction.recommended_intensity,
+        recommended_plan: Array.isArray(prediction.recommended_plan)
+            ? prediction.recommended_plan
+            : [],
+        generated_at: new Date()
+    };
+
+    await workoutPrograms.insertOne(document);
+    return document;
+};
+
 export const predictWorkoutPlan = async ({ userId, fatigueScore }) => {
     const metrics = await getLatestUserMetrics(userId);
 
@@ -92,6 +111,15 @@ export const predictWorkoutPlan = async ({ userId, fatigueScore }) => {
     }
 
     const prediction = await callIaWorkoutApi("/predict", payload);
+
+    if (!prediction?.recommended_program || !prediction?.recommended_intensity) {
+        throw new Error("IA_RESPONSE_INVALID");
+    }
+
+    await persistWorkoutPrediction({
+        userId,
+        prediction
+    });
 
     return {
         recommended_program:   prediction.recommended_program   ?? null,
