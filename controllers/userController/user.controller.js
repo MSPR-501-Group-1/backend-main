@@ -1,5 +1,7 @@
 import * as userService from "../../services/userService/user.service.js";
 import * as authService from "../../services/authService/auth.service.js";
+import multer from "multer";
+import * as storageService from "../../services/storageService/storage.service.js";
 
 // Get all users
 export const getUsers = async (req, res) => {
@@ -194,5 +196,50 @@ export const changePassword = async (req, res) => {
         }
         console.error("Erreur changePassword:", error);
         res.status(500).json({ success: false, message: "Erreur lors du changement de mot de passe" });
+    }
+};
+
+// --- Avatar upload ---
+
+const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 Mo max
+    fileFilter: (_req, file, cb) => {
+        if (storageService.ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(Object.assign(new Error("FILE_TYPE_NOT_ALLOWED"), { code: "FILE_TYPE_NOT_ALLOWED" }));
+        }
+    },
+});
+
+export const avatarUploadMiddleware = (req, res, next) => {
+    avatarUpload.single("avatar")(req, res, (err) => {
+        if (!err) return next();
+        if (err.code === "FILE_TYPE_NOT_ALLOWED") {
+            return res.status(400).json({ success: false, message: "Type de fichier non autorisé (images uniquement)" });
+        }
+        if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ success: false, message: "Fichier trop volumineux (max 5 Mo)" });
+        }
+        next(err);
+    });
+};
+
+// PUT /users/:id/avatar — Mettre à jour la photo de profil
+export const uploadAvatar = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: "Aucun fichier fourni" });
+        }
+        const avatar_url = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "avatars");
+        await userService.updateAvatarUrl(req.params.id, avatar_url);
+        res.status(200).json({ success: true, data: { avatar_url } });
+    } catch (err) {
+        if (err.message === "USER_NOT_FOUND") {
+            return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
+        }
+        console.error("Erreur uploadAvatar:", err);
+        res.status(500).json({ success: false, message: "Erreur lors de l'upload de l'avatar" });
     }
 };
