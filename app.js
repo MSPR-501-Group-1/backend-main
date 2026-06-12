@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import 'dotenv/config';
+import client from 'prom-client';
 
 import userRoutes from "./routes/user.route.js";
 import authRoutes from "./routes/auth.route.js";
@@ -13,10 +14,19 @@ import etlRoutes from "./routes/etl.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import nutritionIARoutes from "./routes/nutritionIA.route.js";
 
+
 // Cron pour les pipelines ETL
 import './cron/cronForEtl.js';
 
 const app = express();
+
+// Pour exposer les métriques Prometheus
+// On monte la route avant l'auth
+client.collectDefaultMetrics();
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
 
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:8081', 'http://localhost:4200'],
