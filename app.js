@@ -13,6 +13,7 @@ import analyticsRoutes, { partnersRouter, dataQualityRouter, dashboardRouter, an
 import etlRoutes from "./routes/etl.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import nutritionIARoutes from "./routes/nutritionIA.route.js";
+import socialRoutes from "./routes/social.route.js";
 
 
 // Cron pour les pipelines ETL
@@ -29,7 +30,13 @@ app.get('/metrics', async (_req, res) => {
 });
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:8081', 'http://localhost:4200'],
+  origin: (origin, callback) => {
+    // Autoriser les requêtes sans origin (mobile, curl) et tous les localhost:*
+    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
@@ -55,6 +62,7 @@ app.use("/etl", etlRoutes);
 app.use("/files", filesRoutes);
 app.use("/workout-prediction", workoutPredictionRoutes);
 app.use("/nutrition-ia", nutritionIARoutes);
+app.use("/posts", socialRoutes);
 
 // Middleware de gestion d'erreurs global
 app.use((err, req, res, next) => {

@@ -56,6 +56,11 @@ export const ownerUpdateUserSchema = z.object({
         .min(1, "Nom requis")
         .max(50, "Nom trop long (max 50)")
         .optional(),
+    display_name: z
+        .string()
+        .min(1, "Nom d'affichage requis")
+        .max(100, "Nom d'affichage trop long (max 100)")
+        .optional(),
     birth_date: z
         .string()
         .regex(
@@ -85,6 +90,11 @@ export const adminUpdateUserSchema = z.object({
         .string()
         .min(1, "Nom requis")
         .max(50, "Nom trop long (max 50)")
+        .optional(),
+    display_name: z
+        .string()
+        .min(1, "Nom d'affichage requis")
+        .max(100, "Nom d'affichage trop long (max 100)")
         .optional(),
     birth_date: z
         .string()
