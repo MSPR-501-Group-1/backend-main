@@ -118,6 +118,45 @@ export const updateUser = async (req, res) => {
     }
 };
 
+// PATCH /users/:id/social-profile
+export const updateUserSocialProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { display_name } = req.body;
+
+        let avatar_url = undefined;
+
+        // Validation si le display_name est envoyé
+        if (display_name !== undefined && display_name.trim() === "") {
+            return res.status(400).json({ success: false, message: "Le nom d'affichage ne peut pas être vide." });
+        }
+
+        // Si un fichier physique a été joint à la requête, on le pousse sur le stockage
+        if (req.file) {
+            avatar_url = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "avatars");
+        }
+
+        // On passe les variables au service. Si display_name ou avatar_url sont 'undefined', ils ne seront pas modifiés (Comportement PATCH)
+        const updatedUser = await userService.updateSocialProfile(id, {
+            display_name: display_name ? display_name.trim() : undefined,
+            avatar_url
+        });
+
+        if (!updatedUser) {
+            return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Profil social mis à jour avec succès",
+            data: updatedUser
+        });
+    } catch (error) {
+        console.error("Erreur dans updateUserSocialProfile:", error);
+        res.status(500).json({ success: false, message: "Erreur lors de la mise à jour du profil social" });
+    }
+};
+
 // Soft delete a user by it's id
 export const softDeleteUser = async (req, res) => {
     try {

@@ -12,6 +12,7 @@ router.get("/:id", authenticate, requireOwnerOrAdmin, controller.getUserById);
 router.delete("/:id", authenticate, requireOwnerOrAdmin, controller.softDeleteUser);
 router.put("/:id", authenticate, requireOwnerOrAdmin, selectUpdateSchema, controller.updateUser);
 router.put("/:id/password", authenticate, requireOwnerOrAdmin, validate(changePasswordSchema), controller.changePassword);
+router.patch("/:id/social-profile", authenticate, requireOwnerOrAdmin, controller.avatarUploadMiddleware, controller.updateUserSocialProfile);
 router.put("/:id/avatar", authenticate, requireOwnerOrAdmin, controller.avatarUploadMiddleware, controller.uploadAvatar);
 
 export default router;
