@@ -9,6 +9,8 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
+RUN npm install @opentelemetry/api @opentelemetry/auto-instrumentations-node prom-client
+
 COPY . .
 
 RUN chown -R node:node /app
