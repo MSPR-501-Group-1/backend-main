@@ -133,6 +133,41 @@ export const updateUser = async (id, data) => {
     return getUserById(id);
 };
 
+// Mise à jour dynamique PATCH (Single Responsibility pour l'écriture SQL du profil)
+export const updateSocialProfile = async (id, data) => {
+    const updates = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (data.display_name !== undefined) {
+        updates.push(`display_name = $${paramIndex}`);
+        params.push(data.display_name);
+        paramIndex++;
+    }
+
+    if (data.avatar_url !== undefined) {
+        updates.push(`avatar_url = $${paramIndex}`);
+        params.push(data.avatar_url);
+        paramIndex++;
+    }
+
+    // Si aucun paramètre n'a été modifié, on retourne simplement l'état actuel de l'utilisateur
+    if (updates.length === 0) {
+        return getUserById(id);
+    }
+
+    params.push(id);
+
+    await db.query(
+        `UPDATE user_ 
+         SET ${updates.join(", ")}, updated_at = NOW() 
+         WHERE user_id = $${paramIndex}`,
+        params
+    );
+
+    return getUserById(id);
+};
+
 // Désactivation d'un utilisateur (soft delete)
 export const softDeleteUser = async (id) => {
     const result = await db.query(
