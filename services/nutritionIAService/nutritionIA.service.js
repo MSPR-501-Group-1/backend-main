@@ -13,8 +13,11 @@ const getIaUrl = () => {
  * Appelle le service IA et retourne le JSON.
  * Lève une erreur explicite en cas d'échec HTTP.
  */
-const callIa = async (path, options = {}) => {
-    const response = await fetch(`${getIaUrl()}${path}`, options);
+const callIa = async (path, options = {}, timeoutMs = 30000) => {
+    const response = await fetch(`${getIaUrl()}${path}`, {
+        ...options,
+        signal: AbortSignal.timeout(timeoutMs),
+    });
 
     if (!response.ok) {
         const body = await response.text();
@@ -30,6 +33,7 @@ export const getMealPlan = async (userId, days = 7) => {
     return callIa(
         `/api/v1/users/${encodeURIComponent(userId)}/meal-plan?days=${days}`,
         { method: "POST" },
+        360000, // 6 min — Ollama qwen2.5:14b peut être lent
     );
 };
 
@@ -42,5 +46,6 @@ export const analyzeMeal = async (userId, fileBuffer, mimeType, filename) => {
     return callIa(
         `/api/v1/users/${encodeURIComponent(userId)}/analyze-meal`,
         { method: "POST", body: formData },
+        180000, // 3 min — HuggingFace vision
     );
 };
