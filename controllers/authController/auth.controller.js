@@ -56,6 +56,8 @@ export const login = async (req, res) => {
                     email: user.email,
                     first_name: user.first_name,
                     last_name: user.last_name,
+                    display_name: user.display_name,
+                    avatar_url: user.avatar_url,
                     role_type: user.role_type
                 },
                 token
@@ -101,6 +103,8 @@ export const getMe = async (req, res) => {
                 email: user.email,
                 first_name: user.first_name,
                 last_name: user.last_name,
+                display_name: user.display_name,
+                avatar_url: user.avatar_url,
                 birth_date: user.birth_date,
                 gender_code: user.gender_code,
                 role_type: user.role_type,
@@ -170,9 +174,8 @@ export const changePassword = async (req, res) => {
     }
 };
 
-// Logout
+// Logout — le client doit supprimer le token de son stockage local
 export const logout = async (req, res) => {
-    // TODO -> Delete the token on client side (in the localStorage)
     res.status(200).json({
         success: true,
         message: "Déconnexion réussie"
