@@ -16,7 +16,7 @@ const upload = multer({
 
 // Middleware multer avec gestion d'erreurs inline (compatible Express 5)
 export const uploadMiddleware = (req, res, next) => {
-  upload.single("media")(req, res, (err) => {
+  upload.array("media", 5)(req, res, (err) => {
     if (!err) return next();
     if (err.code === "FILE_TYPE_NOT_ALLOWED") {
       return res.status(400).json({
@@ -45,21 +45,25 @@ export const getFeed = async (req, res) => {
   }
 };
 
-// POST /posts — Créer un post (texte et/ou média)
+// POST /posts — Créer un post (texte et/ou médias)
 export const createPost = async (req, res) => {
   try {
-    const user_id  = req.user.user_id;
-    const text     = req.body.text?.trim() || null;
+    const user_id = req.user.user_id;
+    const text    = req.body.text?.trim() || null;
+    const files   = req.files ?? [];
 
-    let media_url  = null;
-    let media_type = null;
-
-    if (req.file) {
-      media_type = req.file.mimetype.startsWith("video/") ? "video" : "image";
-      media_url  = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "posts");
+    if (files.length > 5) {
+      return res.status(400).json({ success: false, message: "Un post ne peut pas contenir plus de 5 médias" });
     }
 
-    const post = await socialService.createPost(user_id, { text, media_url, media_type });
+    const mediaFiles = await Promise.all(
+      files.map(async (file) => ({
+        media_type: file.mimetype.startsWith("video/") ? "video" : "image",
+        media_url:  await storageService.uploadFile(file.buffer, file.mimetype, "posts"),
+      }))
+    );
+
+    const post = await socialService.createPost(user_id, { text, mediaFiles });
     res.status(201).json({ success: true, data: post });
   } catch (err) {
     if (err.message === "POST_EMPTY") {
