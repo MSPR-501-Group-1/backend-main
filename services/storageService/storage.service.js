@@ -2,13 +2,14 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 
-const ENDPOINT  = process.env.MINIO_ENDPOINT   || "minio";
-const PORT      = process.env.MINIO_PORT        || "9000";
-const USE_SSL   = process.env.MINIO_USE_SSL     === "true";
-const BUCKET    = process.env.MINIO_BUCKET      || "healthai-media";
+const ENDPOINT = process.env.MINIO_ENDPOINT || "minio";
+const PORT = process.env.MINIO_PORT || "9000";
+const USE_SSL = process.env.MINIO_USE_SSL === "true";
+const BUCKET = process.env.MINIO_BUCKET || "healthai-media";
 
 // URL publique utilisée dans les media_url stockées en base (accessible hors Docker)
-const PUBLIC_URL = process.env.MINIO_PUBLIC_URL || `http://localhost:${PORT}`;
+// const PUBLIC_URL = process.env.MINIO_PUBLIC_URL || `http://localhost:${PORT}`;
+const PUBLIC_URL = `http://10.0.2.2:${PORT}`;
 
 const s3 = new S3Client({
   endpoint: `http${USE_SSL ? "s" : ""}://${ENDPOINT}:${PORT}`,
@@ -22,10 +23,10 @@ const s3 = new S3Client({
 
 const MIME_TO_EXT = {
   "image/jpeg": ".jpg",
-  "image/png":  ".png",
-  "image/gif":  ".gif",
+  "image/png": ".png",
+  "image/gif": ".gif",
   "image/webp": ".webp",
-  "video/mp4":  ".mp4",
+  "video/mp4": ".mp4",
   "video/quicktime": ".mov",
 };
 
@@ -41,6 +42,9 @@ export const uploadFile = async (fileBuffer, mimeType, folder = "uploads") => {
   if (!ext) throw new Error("UNSUPPORTED_FILE_TYPE");
 
   const key = `${folder}/${uuidv4()}${ext}`;
+  if (key.includes("//")) {
+    key.replace("//", "/");
+  }
 
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET,
@@ -53,4 +57,4 @@ export const uploadFile = async (fileBuffer, mimeType, folder = "uploads") => {
 };
 
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-export const ALLOWED_MEDIA_TYPES  = [...ALLOWED_IMAGE_TYPES, "video/mp4", "video/quicktime"];
+export const ALLOWED_MEDIA_TYPES = [...ALLOWED_IMAGE_TYPES, "video/mp4", "video/quicktime"];
