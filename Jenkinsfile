@@ -66,7 +66,7 @@ pipeline {
             echo "Pipeline backend-main : FAILURE (build #${BUILD_NUMBER})"
         }
         always {
-            cleanWs()
+            deleteDir()
         }
     }
 }
