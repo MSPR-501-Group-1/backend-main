@@ -23,6 +23,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # Copier le code source après l'install des deps (optimisation cache)
+RUN npm install @opentelemetry/api @opentelemetry/auto-instrumentations-node prom-client
+
 COPY . .
 
 # Pré-générer la doc Swagger au build, pas au runtime
