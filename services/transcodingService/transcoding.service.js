@@ -2,8 +2,8 @@ import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import path from 'path';
-import { db } from '../db.js';
-import { getObjectStream, uploadFile, getPublicUrl } from './storageService.js';
+import { db } from '../../db.js';
+import { getObjectStream, uploadFileFromPath, getPublicUrl } from '../storageService/storage.service.js';
 import { pipeline } from 'stream/promises';
 
 const TEMP_DIR = path.join(process.cwd(), 'tmp');
@@ -27,7 +27,7 @@ export const processVideo = async (mediaId, rawKey, bucketRaw, bucketProd) => {
         // 2. Transcode to HLS using fluent-ffmpeg
         console.log(`[Transcoding] Transcoding to HLS...`);
         const hlsPlaylistPath = path.join(hlsOutputDir, 'playlist.m3u8');
-        
+
         await new Promise((resolve, reject) => {
             ffmpeg(rawFilePath)
                 .outputOptions([
@@ -51,13 +51,13 @@ export const processVideo = async (mediaId, rawKey, bucketRaw, bucketProd) => {
             const filePath = path.join(hlsOutputDir, file);
             const destKey = `videos/${mediaId}/${file}`;
             const contentType = file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/MP2T';
-            await uploadFile(bucketProd, destKey, filePath, contentType);
+            await uploadFileFromPath(bucketProd, destKey, filePath, contentType);
         }
 
         // 4. Update Database
         const publicPlaylistUrl = getPublicUrl(bucketProd, `videos/${mediaId}/playlist.m3u8`);
         console.log(`[Transcoding] Updating DB status to READY. URL: ${publicPlaylistUrl}`);
-        
+
         await db.query(`
             UPDATE social_post_media 
             SET process_status = 'READY', media_url = $1 

@@ -133,7 +133,7 @@ export const updateUserSocialProfile = async (req, res) => {
 
         // Si un fichier physique a été joint à la requête, on le pousse sur le stockage
         if (req.file) {
-            avatar_url = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "avatars");
+            avatar_url = await storageService.uploadFileBuffer(req.file.buffer, req.file.mimetype, "avatars");
         }
 
         // On passe les variables au service. Si display_name ou avatar_url sont 'undefined', ils ne seront pas modifiés (Comportement PATCH)
@@ -266,19 +266,19 @@ export const avatarUploadMiddleware = (req, res, next) => {
 };
 
 // PUT /users/:id/avatar — Mettre à jour la photo de profil
-export const uploadAvatar = async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: "Aucun fichier fourni" });
-        }
-        const avatar_url = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "avatars");
-        await userService.updateAvatarUrl(req.params.id, avatar_url);
-        res.status(200).json({ success: true, data: { avatar_url } });
-    } catch (err) {
-        if (err.message === "USER_NOT_FOUND") {
-            return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
-        }
-        console.error("Erreur uploadAvatar:", err);
-        res.status(500).json({ success: false, message: "Erreur lors de l'upload de l'avatar" });
-    }
-};
+// export const uploadAvatar = async (req, res) => {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).json({ success: false, message: "Aucun fichier fourni" });
+//         }
+//         const avatar_url = await storageService.uploadFile(req.file.buffer, req.file.mimetype, "avatars");
+//         await userService.updateAvatarUrl(req.params.id, avatar_url);
+//         res.status(200).json({ success: true, data: { avatar_url } });
+//     } catch (err) {
+//         if (err.message === "USER_NOT_FOUND") {
+//             return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
+//         }
+//         console.error("Erreur uploadAvatar:", err);
+//         res.status(500).json({ success: false, message: "Erreur lors de l'upload de l'avatar" });
+//     }
+// };

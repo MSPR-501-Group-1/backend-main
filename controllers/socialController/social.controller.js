@@ -49,8 +49,8 @@ export const getFeed = async (req, res) => {
 export const createPost = async (req, res) => {
   try {
     const user_id = req.user.user_id;
-    const text    = req.body.text?.trim() || null;
-    const files   = req.files ?? [];
+    const text = req.body.text?.trim() || null;
+    const files = req.files ?? [];
 
     if (files.length > 5) {
       return res.status(400).json({ success: false, message: "Un post ne peut pas contenir plus de 5 médias" });
@@ -59,7 +59,7 @@ export const createPost = async (req, res) => {
     const mediaFiles = await Promise.all(
       files.map(async (file) => ({
         media_type: file.mimetype.startsWith("video/") ? "video" : "image",
-        media_url:  await storageService.uploadFile(file.buffer, file.mimetype, "posts"),
+        media_url: await storageService.uploadFile(file.buffer, file.mimetype, "posts"),
       }))
     );
 

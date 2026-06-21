@@ -1,10 +1,10 @@
 import { db } from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { getUploadPresignedUrl } from '../services/storageService.js';
-import { processVideo } from '../services/transcodingService.js';
+import { generateUploadPresignedUrl } from '../services/storageService/storage.service.js';
+import { processVideo } from '../services/transcodingService/transcoding.service.js';
 
-const BUCKET_RAW = process.env.MINIO_BUCKET_RAW || 'raw-uploads';
-const BUCKET_PROD = process.env.MINIO_BUCKET_PROD || 'production-medias';
+const BUCKET_RAW = process.env.MINIO_BUCKET_RAW;
+const BUCKET_PROD = process.env.MINIO_BUCKET_PROD;
 
 export const requestUpload = async (req, res) => {
     try {
@@ -25,7 +25,7 @@ export const requestUpload = async (req, res) => {
         const rawKey = `uploads/${mediaId}.${extension}`;
 
         // Obtenir l'URL pré-signée
-        const presignedUrl = await getUploadPresignedUrl(BUCKET_RAW, rawKey, contentType || 'video/mp4');
+        const presignedUrl = await generateUploadPresignedUrl(BUCKET_RAW, rawKey, contentType || 'video/mp4');
 
         // Créer l'entrée en BDD (status PENDING)
         await db.query(`

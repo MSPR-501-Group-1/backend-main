@@ -177,15 +177,15 @@ export const softDeleteUser = async (id) => {
     return result.rows[0] || null;
 };
 
-// Mise à jour de l'avatar (URL MinIO)
-export const updateAvatarUrl = async (id, avatar_url) => {
-    const result = await db.query(
-        "UPDATE user_ SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2 RETURNING user_id",
-        [avatar_url, id]
-    );
-    if (!result.rows[0]) throw new Error("USER_NOT_FOUND");
-    return true;
-};
+// // Mise à jour de l'avatar (URL MinIO)
+// export const updateAvatarUrl = async (id, avatar_url) => {
+//     const result = await db.query(
+//         "UPDATE user_ SET avatar_url = $1, updated_at = NOW() WHERE user_id = $2 RETURNING user_id",
+//         [avatar_url, id]
+//     );
+//     if (!result.rows[0]) throw new Error("USER_NOT_FOUND");
+//     return true;
+// };
 
 // Suppression définitive d'un utilisateur (hard delete)
 export const hardDeleteUser = async (id) => {
