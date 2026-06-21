@@ -13,7 +13,7 @@
 #  STAGE 1 : builder
 #  Image DHI avec outils de build (-dev). Non shippée en production.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM dhi.io/node:22-alpine-dev AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -33,7 +33,7 @@ RUN node ./swagger.cjs
 #  STAGE 2 : runtime
 #  Image DHI minimale. C'est cette image qui est shippée.
 # ─────────────────────────────────────────────────────────────────────────────
-FROM dhi.io/node:22-alpine AS runtime
+FROM node:22-alpine AS runtime
 
 LABEL org.opencontainers.image.title="Backend Main"
 LABEL org.opencontainers.image.description="API Node.js backend principal"
