@@ -20,7 +20,7 @@ WORKDIR /app
 # Cache Docker : si package.json/package-lock.json n'ont pas changé,
 # npm ci n'est pas ré-exécuté au prochain build.
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # Copier le code source après l'install des deps (optimisation cache)
 RUN npm install @opentelemetry/api @opentelemetry/auto-instrumentations-node prom-client
