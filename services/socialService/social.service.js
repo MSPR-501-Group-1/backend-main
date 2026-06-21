@@ -7,26 +7,15 @@ export const getPosts = async () => {
     SELECT
       sp.post_id,
       sp.text,
+      sp.media_url,
+      sp.media_type,
       sp.created_at,
       u.user_id,
       COALESCE(u.display_name, u.first_name || ' ' || u.last_name) AS display_name,
-      u.avatar_url,
-      COALESCE(
-        json_agg(
-          json_build_object(
-            'media_id',      spm.media_id,
-            'media_url',     spm.media_url,
-            'media_type',    spm.media_type,
-            'thumbnail_url', spm.thumbnail_url
-          )
-        ) FILTER (WHERE spm.media_id IS NOT NULL),
-        '[]'::json
-      ) AS media
+      u.avatar_url
     FROM social_post sp
     JOIN user_ u ON sp.user_id = u.user_id
-    LEFT JOIN social_post_media spm ON sp.post_id = spm.post_id
     WHERE u.is_active = true
-    GROUP BY sp.post_id, u.user_id
     ORDER BY sp.created_at DESC
     LIMIT 100
   `);
@@ -34,29 +23,17 @@ export const getPosts = async () => {
 };
 
 // POST - Crée un nouveau post
-export const createPost = async (user_id, { text, mediaFiles }) => {
-  if (!text && (!mediaFiles || mediaFiles.length === 0)) throw new Error("POST_EMPTY");
+export const createPost = async (user_id, { text, media_url, media_type }) => {
+  if (!text && !media_url) throw new Error("POST_EMPTY");
 
   const post_id = uuidv4();
-  const postResult = await db.query(
-    `INSERT INTO social_post (post_id, user_id, text)
-     VALUES ($1, $2, $3)
+  const result = await db.query(
+    `INSERT INTO social_post (post_id, user_id, text, media_url, media_type)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [post_id, user_id, text || null]
+    [post_id, user_id, text || null, media_url || null, media_type || null]
   );
-
-  const mediaRows = [];
-  for (const { media_url, media_type } of mediaFiles ?? []) {
-    const mediaResult = await db.query(
-      `INSERT INTO social_post_media (media_id, post_id, media_url, media_type)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [uuidv4(), post_id, media_url, media_type]
-    );
-    mediaRows.push(mediaResult.rows[0]);
-  }
-
-  return { ...postResult.rows[0], media: mediaRows };
+  return result.rows[0];
 };
 
 // DELETE - Supprime un post (propriétaire ou admin uniquement)
