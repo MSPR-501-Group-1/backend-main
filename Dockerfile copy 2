@@ -1,0 +1,50 @@
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STAGE 2 : runtime
+#  Image DHI minimale sans outils de build.
+#  C'est cette image qui est réellement shippée et déployée.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM dhi.io/node:22-alpine AS runtime
+
+# Labels OCI de l'image finale — visibles via `docker inspect`
+# En CI, remplacer `revision` par $GITHUB_SHA et `created` par la date du build
+LABEL org.opencontainers.image.title="Backend Main"
+LABEL org.opencontainers.image.description="API Node.js backend principal conteneurisée"
+LABEL org.opencontainers.image.vendor="Votre Organisation"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/votre-org/votre-repo"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.revision="git-commit-hash"
+LABEL org.opencontainers.image.created="2026-06-09T00:00:00Z"
+
+# curl est nécessaire pour le HEALTHCHECK uniquement
+# On regroupe dans un seul RUN pour minimiser les couches
+RUN apk add --no-cache curl
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Copier UNIQUEMENT les fichiers nécessaires à l'exécution depuis le builder
+# → node_modules (dépendances de prod installées proprement)
+# → package.json (requis par Node.js pour résoudre le point d'entrée)
+# → src/ (code source de l'application)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/src ./src
+
+# Donner la propriété des fichiers à l'utilisateur node (non-root)
+# Les images DHI utilisent `dhi-user` par défaut, mais on s'assure
+# ici de la compatibilité avec le user `node` fourni par l'image de base.
+RUN chown -R node:node /app
+
+# Basculer sur l'utilisateur non-root avant toute exécution
+USER node
+
+EXPOSE 3000
+
+# Healthcheck identique à l'original — vérifie que l'API répond sur /health
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+	CMD curl -fsS http://127.0.0.1:3000/health || exit 1
+
+CMD ["npm", "run", "start"]
