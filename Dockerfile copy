@@ -1,0 +1,44 @@
+# =============================================================================
+#  BACKEND MAIN — Dockerfile optimisé
+#  Itérations appliquées :
+#    1. Multi-stage build (builder → runtime)
+#    2. Labels OpenContainers (OCI) pour la traçabilité
+#    3. Docker Hardened Image (DHI) pour la sécurité
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  STAGE 1 : builder
+#  Image DHI avec outils de build (-dev).
+#  Ce stage n'est JAMAIS inclus dans l'image finale shippée.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM dhi.io/node:22-alpine-dev AS builder
+
+# Labels OCI du stage de build (documentaire — non visibles dans l'image finale)
+LABEL org.opencontainers.image.title="Backend Main - Build Stage"
+LABEL org.opencontainers.image.description="Étape de build pour le backend Node.js principal"
+LABEL org.opencontainers.image.vendor="Votre Organisation"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.source="https://github.com/votre-org/votre-repo"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.revision="git-commit-hash"
+LABEL org.opencontainers.image.created="2026-06-09T00:00:00Z"
+
+WORKDIR /app
+
+# Copier uniquement les fichiers de dépendances en premier
+# → Optimisation du cache Docker : cette couche n'est invalidée
+#   que si package.json ou package-lock.json changent.
+COPY package.json package-lock.json ./
+
+# Installer les dépendances de production uniquement
+# --omit=dev     : exclut les devDependencies
+# --no-audit     : désactive l'audit npm (géré par Trivy en CI)
+# --no-fund      : supprime les messages de financement
+# npm cache clean : supprime le cache pour ne pas l'embarquer dans le layer
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+
+# Copier le code source APRÈS l'installation des dépendances
+# → Si le code change mais pas les dépendances, le cache de la couche
+#   npm ci est réutilisé (build plus rapide).
+COPY . .
+
