@@ -48,27 +48,16 @@ export const getFeed = async (req, res) => {
 // POST /posts — Créer un post (texte et/ou médias)
 export const createPost = async (req, res) => {
   try {
+    const { text } = req.body;
     const user_id = req.user.user_id;
-    const text = req.body.text?.trim() || null;
-    const files = req.files ?? [];
 
-    if (files.length > 5) {
-      return res.status(400).json({ success: false, message: "Un post ne peut pas contenir plus de 5 médias" });
+    if (!text || text.trim() === "") {
+      return res.status(400).json({ success: false, message: "Le post doit contenir du texte" });
     }
 
-    const mediaFiles = await Promise.all(
-      files.map(async (file) => ({
-        media_type: file.mimetype.startsWith("video/") ? "video" : "image",
-        media_url: await storageService.uploadFile(file.buffer, file.mimetype, "posts"),
-      }))
-    );
-
-    const post = await socialService.createPost(user_id, { text, mediaFiles });
+    const post = await socialService.createPost(user_id, { text, mediaFiles: [] });
     res.status(201).json({ success: true, data: post });
   } catch (err) {
-    if (err.message === "POST_EMPTY") {
-      return res.status(400).json({ success: false, message: "Le post doit contenir du texte ou un média" });
-    }
     console.error("Erreur createPost:", err);
     res.status(500).json({ success: false, message: "Erreur lors de la création du post" });
   }

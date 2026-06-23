@@ -1,5 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3Client, PutObjectCommand, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,25 +25,34 @@ const MIME_TO_EXT = {
   "video/quicktime": ".mov",
 };
 
-// Client principal pour les échanges internes au réseau Docker
-const s3Client = new S3Client({
-  region: 'eu-west-1',
-  endpoint: internalEndpoint,
-  credentials: { accessKeyId: accessKeyId, secretAccessKey: secretAccessKey },
-  forcePathStyle: true,
-  requestChecksumCalculation: 'WHEN_REQUIRED',
-  responseChecksumValidation: 'WHEN_REQUIRED',
-});
+// Génération dynamique du client interne pour éviter les conflits d'initialisation de dotenv
+const getInternalS3Client = () => {
+  return new S3Client({
+    region: 'eu-west-1',
+    endpoint: internalEndpoint,
+    credentials: {
+      accessKeyId: accessKeyId,
+      secretAccessKey: secretAccessKey,
+    },
+    forcePathStyle: true,
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
+  });
+};
 
 /**
- * RESPONSABILITÉ 1 : Génération d'URLs de dépôt pré-signées (Pour Postman / Upload direct)
+ * RESPONSABILITÉ 1 : Génération d'URLs de dépôt pré-signées
  */
-export const generateUploadPresignedUrl = async (bucket, key, contentType) => {
-  // Utilisation d'un client dédié basé sur l'URL publique pour éviter les rejets de signature à l'externe
+export const generateUploadPresignedUrl = async (bucket, key, contentType, customEndpoint = null) => {
+  const finalEndpoint = customEndpoint || publicEndpoint;
+
   const signingClient = new S3Client({
     region: 'eu-west-1',
-    endpoint: publicEndpoint,
-    credentials: { accessKeyId: accessKeyId, secretAccessKey: secretAccessKey },
+    endpoint: finalEndpoint,
+    credentials: {
+      accessKeyId: accessKeyId,
+      secretAccessKey: secretAccessKey,
+    },
     forcePathStyle: true,
     requestChecksumCalculation: 'WHEN_REQUIRED',
     responseChecksumValidation: 'WHEN_REQUIRED',
@@ -75,6 +83,7 @@ export const uploadFileBuffer = async (fileBuffer, mimeType, folder = "uploads",
     ContentType: mimeType,
   });
 
+  const s3Client = getInternalS3Client();
   await s3Client.send(command);
 
   // Retourne l'URL formatée pour l'application mobile (IP Émulateur 10.0.2.2)
@@ -92,6 +101,8 @@ export const uploadFileFromPath = async (bucket, key, filePath, contentType) => 
     Body: fileStream,
     ContentType: contentType,
   });
+
+  const s3Client = getInternalS3Client();
   return await s3Client.send(command);
 };
 
@@ -103,13 +114,40 @@ export const getObjectStream = async (bucket, key) => {
     Bucket: bucket,
     Key: key,
   });
+
+  const s3Client = getInternalS3Client();
   const response = await s3Client.send(command);
   return response.Body;
+};
+
+/**
+ * RESPONSABILITÉ INTERNE : Copier un objet d'un bucket à un autre
+ */
+export const copyObject = async (sourceBucket, sourceKey, destBucket, destKey) => {
+  const s3Client = getInternalS3Client();
+  const command = new CopyObjectCommand({
+    Bucket: destBucket,
+    Key: destKey,
+    CopySource: `${sourceBucket}/${sourceKey}`,
+  });
+  return await s3Client.send(command);
+};
+
+/**
+ * RESPONSABILITÉ INTERNE : Supprimer un objet (pour nettoyer la zone de transit)
+ */
+export const deleteObject = async (bucket, key) => {
+  const s3Client = getInternalS3Client();
+  const command = new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  return await s3Client.send(command);
 };
 
 /**
  * RESPONSABILITÉ 5 : Construction d'URLs publiques standardisées (Pour le stockage en BDD général)
  */
 export const getPublicUrl = (bucket, key) => {
-  return `${publicEndpoint}/${bucket}/${key}`;
+  return `${appEndpoint}/${bucket}/${key}`;
 };
