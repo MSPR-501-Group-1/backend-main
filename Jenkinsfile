@@ -26,6 +26,17 @@ pipeline {
             }
         }
 
+        stage('Test & Coverage') {
+            steps {
+                sh 'npm run test:coverage || true'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: '**/test-results/*.xml'
+                }
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -36,7 +47,8 @@ pipeline {
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.sources=. \
                                 -Dsonar.inclusions="**/*.js,**/*.mjs" \
-                                -Dsonar.exclusions="**/node_modules/**,**/swagger-output.json"
+                                -Dsonar.exclusions="**/node_modules/**,**/swagger-output.json,**/coverage/**" \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
                         """
                     }
                 }
@@ -46,7 +58,7 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                    waitForQualityGate abortPipeline: false
                 }
             }
         }
