@@ -19,7 +19,7 @@ export const getPosts = async () => {
             'media_type',    spm.media_type,
             'thumbnail_url', spm.thumbnail_url
           )
-        ) FILTER (WHERE spm.media_id IS NOT NULL),
+        ) FILTER (WHERE spm.media_id IS NOT NULL AND spm.process_status = 'READY'),
         '[]'::json
       ) AS media
     FROM social_post sp

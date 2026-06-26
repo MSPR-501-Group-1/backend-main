@@ -14,6 +14,7 @@ import etlRoutes from "./routes/etl.routes.js";
 import filesRoutes from "./routes/files.routes.js";
 import nutritionIARoutes from "./routes/nutritionIA.route.js";
 import socialRoutes from "./routes/social.route.js";
+import mediaRoutes from "./routes/mediaRoutes.js";
 
 
 // Cron pour les pipelines ETL
@@ -63,6 +64,7 @@ app.use("/files", filesRoutes);
 app.use("/workout-prediction", workoutPredictionRoutes);
 app.use("/nutrition-ia", nutritionIARoutes);
 app.use("/posts", socialRoutes);
+app.use("/media", mediaRoutes);
 
 // Middleware de gestion d'erreurs global
 app.use((err, req, res, next) => {
